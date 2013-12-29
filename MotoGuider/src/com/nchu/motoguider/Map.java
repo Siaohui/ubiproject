@@ -21,7 +21,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.os.AsyncTask;
-import android.app.Activity;
 import android.app.ListActivity;
 import android.content.Intent;
 import android.location.*;
@@ -40,21 +39,15 @@ public class Map extends ListActivity
 		double dest_lng = 120.685008;		   
 		LatLng dest = new LatLng(dest_lat,dest_lng);
 		LatLng origin = getOriginGPS();
-		/*
+		
 		Intent getIntent = this.getIntent();
-		Bundle bundle = getIntent.getExtras();;
+		Bundle bundle = getIntent.getExtras();
 		dest_lat = bundle.getDouble("lat");
 		dest_lng = bundle.getDouble("lng");
-		*/
+		Log.d("Map","Get lat,lng = "+dest_lat+"/"+dest_lng);
 		super.onCreate(savedInstanceState);
 		//setContentView(R.layout.activity_map);
 		// list view
-		setListAdapter( 
-                new ArrayAdapter<String>(
-                        this, 
-                        android.R.layout.simple_list_item_1, 
-                        values) 
-        );
 		//
 		Intent intent = new Intent(Map.this, InfoService.class);
 		startService(intent);
@@ -62,6 +55,13 @@ public class Map extends ListActivity
 		String url = getDirectionsUrl(origin, dest);
 		DownloadTask downloadTask = new DownloadTask();
 		downloadTask.execute(url);
+		
+		setListAdapter( 
+                new ArrayAdapter<String>(
+                        this, 
+                        android.R.layout.simple_list_item_1, 
+                        values) 
+        );
 	 }
 		 
 	 public LatLng getOriginGPS()

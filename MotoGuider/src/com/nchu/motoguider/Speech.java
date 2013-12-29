@@ -33,6 +33,8 @@ public class Speech extends Activity
 	protected static final int RESULT_SPEECH = 1;
 	private String dest_tmp;
 	LatLng destGeo;
+	double lat;
+	double lng;
 	@Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -80,11 +82,13 @@ public class Speech extends Activity
                 dest_tmp = text.get(0);
                 Log.d("Speech",dest_tmp);
                 new LoadingDataAsyncTask().execute(dest_tmp);
+                
                 Intent intent = new Intent(Speech.this, Map.class);
+           
     			Bundle bundle = new Bundle();
     			
-    			//bundle.putDouble("lat", destGeo.latitude);
-    			//bundle.putDouble("lng", destGeo.longitude);
+    			bundle.putDouble("lat", lat);
+    			bundle.putDouble("lng", lng);
     		
     			intent.putExtras(bundle);
     			startActivity(intent);
@@ -103,6 +107,7 @@ public class Speech extends Activity
 			String result ="";
 			result = getData(param[0]);
 			Log.d("speech","download geocoder");
+			destGeo = getLatLng(result);
 			return result;
 		}
 
@@ -176,8 +181,8 @@ public class Speech extends Activity
 			location = obj3.get("location").toString();
 			JSONObject obj4 = new JSONObject(location);
 			
-			double lat = obj4.getDouble("lat");
-			double lng = obj4.getDouble("lng");
+			lat = obj4.getDouble("lat");
+			lng = obj4.getDouble("lng");
 			
 			Log.d("speech","location="+lat+"/"+lng);
 			//
