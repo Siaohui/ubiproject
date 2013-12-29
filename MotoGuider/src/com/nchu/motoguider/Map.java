@@ -30,6 +30,7 @@ import java.util.List;
 import org.json.JSONObject;
 
 import android.os.AsyncTask;
+import android.content.Intent;
 import android.location.*;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -50,9 +51,11 @@ public class Map extends FragmentActivity
 		 
 		   LatLng origin = getOriginGPS();
 		   
+		   Intent intent = new Intent(Map.this, InfoService.class);
+		   startService(intent);
 		 
-		 super.onCreate(savedInstanceState);
-		 setContentView(R.layout.activity_map);
+		   super.onCreate(savedInstanceState);
+		   setContentView(R.layout.activity_map);
 	
 		  // Initializing
 		  markerPoints = new ArrayList<LatLng>();

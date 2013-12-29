@@ -52,7 +52,12 @@
             </intent-filter>
         </activity>
         <activity android:name="com.nchu.motoguider.Speech"></activity>
-        
+        <service android:name="com.nchu.motoguider.InfoService" >
+                <action android:name="com.nchu.motoguider.InfoService" />
+            <intent-filter>
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
