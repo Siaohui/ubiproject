@@ -83,10 +83,8 @@ public class Speech extends Activity
                 Intent intent = new Intent(Speech.this, Map.class);
     			Bundle bundle = new Bundle();
     			
-    			//Log.d("speech","lat:"+String.valueOf(destGeo.latitude));
-    			//Log.d("speech","lng:"+String.valueOf(destGeo.longitude));
-    			//bundle.putExtras("lat", String.valueOf(destGeo.latitude));
-    			//bundle.putExtras("lng", String.valueOf(destGeo.longitude));
+    			//bundle.putDouble("lat", destGeo.latitude);
+    			//bundle.putDouble("lng", destGeo.longitude);
     		
     			intent.putExtras(bundle);
     			startActivity(intent);
