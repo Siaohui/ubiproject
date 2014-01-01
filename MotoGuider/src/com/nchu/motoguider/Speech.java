@@ -1,5 +1,9 @@
 package com.nchu.motoguider;
 
+/*
+ * 語音輸入目的地，利用GeoCoder轉成經緯度
+ * */
+
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -29,12 +33,10 @@ import android.widget.Toast;
 public class Speech extends Activity
 {
 	ImageButton speechBtn;
-	
 	protected static final int RESULT_SPEECH = 1;
 	private String dest_tmp;
 	LatLng destGeo;
-	double lat;
-	double lng;
+	
 	@Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -48,15 +50,14 @@ public class Speech extends Activity
 	private OnClickListener startSpeech = new OnClickListener()
 	{
 		public void onClick(View v)
-		{
-			String destination = "忠孝夜市";
-					
+		{					
 			Intent intent_2 = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
 	        intent_2.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
 
 	        try 
 	        {
 	        	startActivityForResult(intent_2, RESULT_SPEECH);
+	        	/* 啟動Google語音輸入 */
 	        }
 	        catch (ActivityNotFoundException a)
 	        {
@@ -74,28 +75,18 @@ public class Speech extends Activity
  
         switch (requestCode)
         {
-        case RESULT_SPEECH: 
-        {
-            if(resultCode == RESULT_OK && null != data)
-            {
-                ArrayList<String> text = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                dest_tmp = text.get(0);
-                Log.d("Speech",dest_tmp);
-                new LoadingDataAsyncTask().execute(dest_tmp);
-                
-                Intent intent = new Intent(Speech.this, Map.class);
-           
-    			Bundle bundle = new Bundle();
-    			
-    			bundle.putDouble("lat", lat);
-    			bundle.putDouble("lng", lng);
-    		
-    			intent.putExtras(bundle);
-    			startActivity(intent);
-
-                break;
-            }
-        }
+	        case RESULT_SPEECH: 
+	        {
+	            if(resultCode == RESULT_OK && null != data)
+	            {
+	                ArrayList<String> text = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+	                dest_tmp = text.get(0);
+	                Log.d("Speech","語音輸入的目的地為 = " + dest_tmp);
+	                new LoadingDataAsyncTask().execute(dest_tmp);
+	                // 下載GeoCoder的資料
+	                break;
+	            }
+	        }
         }
     }
 	
@@ -106,16 +97,29 @@ public class Speech extends Activity
 		{
 			String result ="";
 			result = getData(param[0]);
-			Log.d("speech","download geocoder");
+			Log.d("speech","下載語音輸入地點資料");
 			destGeo = getLatLng(result);
 			return result;
+			// result會由onPostExecute接收
 		}
 
 		@Override
 		protected void onPostExecute(String result)
 		{
 			super.onPostExecute(result);
-			destGeo = getLatLng(result);
+			
+            Intent intent = new Intent(Speech.this, Map.class);
+       
+			Bundle bundle = new Bundle();
+			Log.d("speech", "傳送語音輸入目的地經/緯度 = "
+					+ destGeo.latitude + "/" + destGeo.longitude);
+			bundle.putDouble("lat", destGeo.latitude);
+			bundle.putDouble("lng", destGeo.longitude);
+		
+			intent.putExtras(bundle);
+			startActivity(intent);
+			// 取得經緯度後傳遞 + 跳轉至 Map.class
+
 		}
 
 		@Override
@@ -131,11 +135,11 @@ public class Speech extends Activity
 		}
 
 	}
-	
+	// 下載JSON資料
 	public String getData(String dest)
 	{
 		String _url = "http://maps.googleapis.com/maps/api/geocode/json?address="+dest+"&sensor=false";
-		String result ="";
+		String result = "";
 		HttpClient client = new DefaultHttpClient();
 		HttpGet get = new HttpGet(_url);
 		
@@ -145,7 +149,6 @@ public class Speech extends Activity
 			response = client.execute(get);
 			HttpEntity resEntity = response.getEntity();
 			result = EntityUtils.toString(resEntity);
-			//Log.d("speech",result);
 			return result;
 			
 		} catch (ClientProtocolException e) 
@@ -159,17 +162,16 @@ public class Speech extends Activity
 		}
 		return result;
 	}
-	
+	// 取得經緯度
 	public LatLng getLatLng(String result)
 	{
 		LatLng finalGeo = new LatLng(0,0);
 		JSONObject jobj;
 		JSONArray obj;
-		String allLocation;
-		String location ="";
+		double lat, lng;
+		String allLocation, location ="";
 		try 
 		{
-			// ....
 			jobj= new JSONObject(result);
 			obj = jobj.getJSONArray("results");
 			String obj2 = obj.get(0).toString();
@@ -185,9 +187,9 @@ public class Speech extends Activity
 			lng = obj4.getDouble("lng");
 			
 			Log.d("speech","location="+lat+"/"+lng);
-			//
 			finalGeo = new LatLng(lat,lng);
 			return finalGeo;
+			
 		} catch (JSONException e) 
 		{
 			Log.d("speech","JsonException");

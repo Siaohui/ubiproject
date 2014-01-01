@@ -1,5 +1,5 @@
 /*
- * App初始進入點
+ * 應用程式初始進入點
  * */
 package com.nchu.motoguider;
 
@@ -26,6 +26,6 @@ public class Initial extends Activity
                 startActivity(intent);
                 finish();
              }
-            }, 2000); /* 顯示2秒後跳轉 */    
+            }, 2000); /* 顯示2秒後跳轉至Speech.class */    
     }
 }

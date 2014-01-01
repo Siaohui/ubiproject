@@ -13,10 +13,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.List;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -28,40 +25,31 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class Map extends ListActivity 
 {
+	String[] values;
 	ListView showInstructionView;
 	TextView showText;
 	String[] instruction;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) 
 	{
-		String[] values = new String[] { "Android", "iPhone", "WindowsMobile", "Blackberry", "WebOS", "Ubuntu", "Windows7", "Max OS X", "Linux", "OS/2" };
-		double dest_lat = 24.136781;
-		double dest_lng = 120.685008;		   
-		LatLng dest = new LatLng(dest_lat,dest_lng);
-		LatLng origin = getOriginGPS();
+		double dest_lat = 0;
+		double dest_lng = 0;		   
 		
 		Intent getIntent = this.getIntent();
-		Bundle bundle = getIntent.getExtras();
+		Bundle bundle = getIntent.getExtras();		
 		dest_lat = bundle.getDouble("lat");
 		dest_lng = bundle.getDouble("lng");
-		Log.d("Map","Get lat,lng = "+dest_lat+"/"+dest_lng);
+		Log.d("Map","自Geocoder取得目的地經/緯度 = "+dest_lat+"/"+dest_lng);
+		
+		LatLng dest = new LatLng(dest_lat,dest_lng);
+		LatLng origin = new LatLng(24.1236371,120.6750405);//getOriginGPS();
+		// origin目前寫死為中興大學,因測試中無法取得自己的GPS
 		super.onCreate(savedInstanceState);
-		//setContentView(R.layout.activity_map);
-		// list view
-		//
-		Intent intent = new Intent(Map.this, InfoService.class);
-		startService(intent);
 		   
 		String url = getDirectionsUrl(origin, dest);
 		DownloadTask downloadTask = new DownloadTask();
 		downloadTask.execute(url);
-		
-		setListAdapter( 
-                new ArrayAdapter<String>(
-                        this, 
-                        android.R.layout.simple_list_item_1, 
-                        values) 
-        );
+
 	 }
 		 
 	 public LatLng getOriginGPS()
@@ -78,11 +66,14 @@ public class Map extends ListActivity
 	     }
 	     catch (NullPointerException e)
 	     {
-	    	 Log.d("map","nullpointer");
+	    	 Log.d("Map","nullpointer");
 	         e.printStackTrace();
 	     
 	     }
-	     Log.d("map","Origin:lat = " + lat + " lon = "+lon);
+	     if(lat == 0 & lon == 0)
+	    	 Log.d("Map","目前無法使用GPS取得您的位置");
+	     else
+	    	 Log.d("Map","您目前位置的GPS經緯度 = " + lat + "/ lon = "+lon);
 	     return new LatLng(lat,lon);
 	 }
 
@@ -110,47 +101,11 @@ public class Map extends ListActivity
 		 return url;
 	 }
 	 /* 取得html_instruction中的方向code */
-	 public int getTurn(String s)
-	 {
-		 int turnResult=-1;
-		 
-		 if(s.contains("north"))
-			 turnResult=0;
-		 else if(s.contains("northeast"))
-			 turnResult=1;
-		 else if(s.contains("east"))
-			 turnResult=2;
-		 else if(s.contains("southeast"))
-			 turnResult=3;
-		 else if(s.contains("south"))
-			 turnResult=4;
-		 else if(s.contains("southwest"))
-			 turnResult=5;
-		 else if(s.contains("west"))
-			 turnResult=6;
-		 else if(s.contains("northwest"))
-			 turnResult=7;
-		 if(s.contains("Turn")&s.contains("left"))
-			 turnResult=8;
-		 if(s.contains("Turn")&s.contains("right"))
-			 turnResult=9;
-		 if(s.contains("Slight")&s.contains("left"))
-			 turnResult=10;
-		 if(s.contains("Slight")&s.contains("right"))
-			 turnResult=11;
-		 if(s.contains("Sharp")&s.contains("left"))
-			 turnResult=12;
-		 if(s.contains("Sharp")&s.contains("right"))
-			 turnResult=13;
-		 if(s.contains("U-turn"))
-			 turnResult=14;
-		 return turnResult; 
-	}
 	
 	 /**從URL下載JSON資料的方法**/
 	 private String downloadUrl(String strUrl) throws IOException 
 	 {
-		 String data = "";
+		  String data = "";
 		  InputStream iStream = null;
 		  HttpURLConnection urlConnection = null;
 		  try 
@@ -179,14 +134,16 @@ public class Map extends ListActivity
 		   data = sb.toString();
 		
 		   br.close();
-	}
-	catch (Exception e) 
-	{
-	   Log.d("Exception while downloading url", e.toString());
-	  } finally {
-	   iStream.close();
-	   urlConnection.disconnect();
-	  }
+		}
+		catch (Exception e) 
+		{
+		   Log.d("Exception while downloading url", e.toString());
+		}
+		finally 
+		{
+		   iStream.close();
+		   urlConnection.disconnect();
+		}
 	  return data;
 	 }
 	
@@ -215,84 +172,52 @@ public class Map extends ListActivity
 	  @Override
 	  protected void onPostExecute(String result)
 	  {
-	   super.onPostExecute(result);
-	   ParserTask parserTask = new ParserTask();
-	   // Invokes the thread for parsing the JSON data
-	   parserTask.execute(result);
+		  super.onPostExecute(result);
+		  ParserTask parserTask = new ParserTask();
+		  // Invokes the thread for parsing the JSON data
+		  parserTask.execute(result);
 	  }
 	 }
 	
 	 /** 解析JSON格式 **/
 	 private class ParserTask extends
-	   AsyncTask<String, Integer, List<List<HashMap<String, String>>>> 
+	   AsyncTask<String, Integer, JSONData> 
 	 {
 		 // Parsing the data in non-ui thread
 		  @Override
-		  protected List<List<HashMap<String, String>>> doInBackground(
-		    String... jsonData)
+		  protected JSONData doInBackground(String... jsonData)
 		 {
 		   JSONObject jObject;
-		   List<List<HashMap<String, String>>> routes = null;
+		   JSONData allData = null;
 		   try 
 		   {
-			    jObject = new JSONObject(jsonData[0]);
-			    DirectionsJSONParser parser = new DirectionsJSONParser();
-			    // Starts parsing data
-			    routes = parser.parse(jObject);
-			    //
-			    JSONArray jRoutes = null;
-			    JSONArray jLegs = null;
-			    JSONArray jSteps = null;
-			    String end_location_lat ;
-			    String end_location_lng ;
-			    String start_location_lat;
-			    String start_location_lng;
-			    String html_instructions = "";
-			    
-			    try 
-			    {
-			  	  jRoutes = jObject.getJSONArray("routes");
-			  	  /** Traversing all routes */
-			     
-			  	   for(int i=0;i<jRoutes.length();i++)
-			  	   {   
-			  	    jLegs = ( (JSONObject)jRoutes.get(i)).getJSONArray("legs");
-			  	    
-			  	    /** Traversing all legs */
-			  	    for(int j=0;j<jLegs.length();j++)
-			  	    {
-			  	     jSteps = ( (JSONObject)jLegs.get(j)).getJSONArray("steps");
-			  	     
-			  	     /** Traversing all steps */
-			  	     for(int k=0;k<jSteps.length();k++)
-			  	     {
-			  	    	 end_location_lat = (((JSONObject)((JSONObject)jSteps.get(k)).get("end_location"))).get("lat").toString() ;   	 
-			  	    	 end_location_lng = (((JSONObject)((JSONObject)jSteps.get(k)).get("end_location"))).get("lng").toString() ;
-			  	    	 start_location_lat = (((JSONObject)((JSONObject)jSteps.get(k)).get("start_location"))).get("lat").toString() ;
-			  	    	 start_location_lng =(((JSONObject)((JSONObject)jSteps.get(k)).get("start_location"))).get("lng").toString() ;
-			  	    	 html_instructions = ((((JSONObject)jSteps.get(k)).getString("html_instructions")).toString());
-			  	    	 
-			  	    	 Log.d("distance",end_location_lat);
-			  	    	 Log.d("distance",end_location_lng);
-			  	    	 Log.d("distance",start_location_lat);
-			  	    	 Log.d("distance",start_location_lng);
-			  	    	 Log.d("distance",html_instructions);
-			  	    	 
-			  	    	 Log.d("distance",""+getTurn(html_instructions));
-			  	     }
-			  	    }
-			     }
-			    } catch (JSONException e)
-			    { 
-			    	e.printStackTrace();
-			    }
-			    catch (Exception e){}
-		   }
-		   catch (Exception e)
-		   {
-			   e.printStackTrace();
-		   }
-		   return routes;
+			   jObject = new JSONObject(jsonData[0]);
+			   allData = new JSONData(jObject);
+			   return allData;
+			} catch (JSONException e) 
+			{
+				e.printStackTrace();
+			}
+		   return allData;
+		   
+		  }
+		  
+		  @Override
+		  protected void onPostExecute(JSONData result)
+		  {
+			  values = result.getAllRoadInstruction();
+			  setListAdapter
+			  ( 
+		                new ArrayAdapter<String>(
+		                        Map.this, 
+		                        android.R.layout.simple_list_item_1, 
+		                        values)
+		      );
+			  Intent intent = new Intent(Map.this, InfoService.class);
+			  Bundle bundle = new Bundle();
+			  bundle.putSerializable("allData",result);
+			  intent.putExtras(bundle);
+			  startService(intent);
 		  }
 	 }
 }

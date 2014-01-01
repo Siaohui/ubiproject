@@ -5,7 +5,6 @@ import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
- 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -15,11 +14,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
 import android.widget.Toast;
  
-public class Bluetooth extends Activity {
+public class Bluetooth extends Activity 
+{
   private static final String TAG = "bluetoothtest";  
   private BluetoothAdapter btAdapter = null;
   private BluetoothSocket btSocket = null;
@@ -29,27 +27,30 @@ public class Bluetooth extends Activity {
    
   /** Called when the activity is first created. */
   @Override
-  public void onCreate(Bundle savedInstanceState) {
-
-    super.onCreate(savedInstanceState);
- 
-    //setContentView(R.layout.activity_main);
-    
+  public void onCreate(Bundle savedInstanceState) 
+  {
+    super.onCreate(savedInstanceState); 
+    //setContentView(R.layout.activity_main);   
     btAdapter = BluetoothAdapter.getDefaultAdapter();
     checkBTState();
     
   }
-  public void OnSend(View v){
+  public void OnSend(View v)
+  {
 	  sendData("Connecting from application:" + TAG + "\n");
       Toast.makeText(getBaseContext(), "Send Connect~", Toast.LENGTH_SHORT).show();
   }
   
-  private BluetoothSocket createBluetoothSocket(BluetoothDevice device) throws IOException {
-      if(Build.VERSION.SDK_INT >= 10){
-          try {
+  private BluetoothSocket createBluetoothSocket(BluetoothDevice device) throws IOException 
+  {
+      if(Build.VERSION.SDK_INT >= 10)
+      {
+          try 
+          {
               final Method  m = device.getClass().getMethod("createInsecureRfcommSocketToServiceRecord", new Class[] { UUID.class });
               return (BluetoothSocket) m.invoke(device, MY_UUID);
-          } catch (Exception e) {
+          } catch (Exception e) 
+          {
               Log.e(TAG, "Could not create Insecure RFComm Connection",e);
           }
       }
@@ -57,7 +58,8 @@ public class Bluetooth extends Activity {
   }
    
   @Override
-  public void onResume() {
+  public void onResume() 
+  {
 	Toast.makeText(getBaseContext(), "onResume()", Toast.LENGTH_SHORT).show();
     super.onResume();
  
@@ -72,9 +74,11 @@ public class Bluetooth extends Activity {
     //   A Service ID or UUID.  In this case we are using the
     //     UUID for SPP.
    
-	try {
+	try 
+	{
 		btSocket = createBluetoothSocket(device);
-	} catch (IOException e1) {
+	} catch (IOException e1) 
+	{
 		errorExit("Fatal Error", "In onResume() and socket create failed: " + e1.getMessage() + ".");
 	}
     
@@ -92,14 +96,18 @@ public class Bluetooth extends Activity {
     Log.d(TAG, "...Connecting...");
     Toast.makeText(getBaseContext(), "... Connecting...", Toast.LENGTH_SHORT).show();
     
-    try {
+    try 
+    {
       btSocket.connect();
       Log.d(TAG, "...Connection ok...");
       Toast.makeText(getBaseContext(), "...Connection ok...", Toast.LENGTH_SHORT).show();
-    } catch (IOException e) {
-      try {
+    } catch (IOException e) 
+    {
+      try 
+      {
         btSocket.close();
-      } catch (IOException e2) {
+      } catch (IOException e2)
+      {
         errorExit("Fatal Error", "In onResume() and unable to close socket during connection failure" + e2.getMessage() + ".");
       }
     }
@@ -108,42 +116,53 @@ public class Bluetooth extends Activity {
     Log.d(TAG, "...Create Socket...");
     Toast.makeText(getBaseContext(), "...Create Socket...", Toast.LENGTH_SHORT).show();
  
-    try {
+    try 
+    {
       outStream = btSocket.getOutputStream();
-    } catch (IOException e) {
+    } catch (IOException e) 
+    {
       errorExit("Fatal Error", "In onResume() and output stream creation failed:" + e.getMessage() + ".");
     }
   }
  
   @Override
-  public void onPause() {
+  public void onPause()
+  {
     super.onPause();
  
     Log.d(TAG, "...In onPause()...");
  
-    if (outStream != null) {
-      try {
+    if (outStream != null) 
+    {
+      try 
+      {
         outStream.flush();
-      } catch (IOException e) {
+      } catch (IOException e) 
+      {
         errorExit("Fatal Error", "In onPause() and failed to flush output stream: " + e.getMessage() + ".");
       }
     }
  
-    try     {
+    try    
+    {
       btSocket.close();
-    } catch (IOException e2) {
+    } catch (IOException e2) 
+    {
       errorExit("Fatal Error", "In onPause() and failed to close socket." + e2.getMessage() + ".");
     }
   }
    
-  private void checkBTState() {
+  private void checkBTState() 
+  {
 	Toast.makeText(getBaseContext(), "checkBTState()", Toast.LENGTH_SHORT).show();
     // Check for Bluetooth support and then check to make sure it is turned on
     // Emulator doesn't support Bluetooth and will return null
-    if(btAdapter==null) { 
+    if(btAdapter==null) 
+    { 
       errorExit("Fatal Error", "Bluetooth not support");
     } else {
-      if (btAdapter.isEnabled()) {
+      if (btAdapter.isEnabled()) 
+      {
         Log.d(TAG, "...Bluetooth ON...");
       } else {
         //Prompt user to turn on Bluetooth
@@ -153,19 +172,23 @@ public class Bluetooth extends Activity {
     }
   }
  
-  private void errorExit(String title, String message){
+  private void errorExit(String title, String message)
+  {
     Toast.makeText(getBaseContext(), title + " - " + message, Toast.LENGTH_LONG).show();
     finish();
   }
  
-  private void sendData(String message) {
+  private void sendData(String message) 
+  {
     byte[] msgBuffer = message.getBytes();
  
     Log.d(TAG, "...Send data: " + message + "...");
  
-    try {
+    try 
+    {
       outStream.write(msgBuffer);
-    } catch (IOException e) {
+    } catch (IOException e) 
+    {
       String msg = "In onResume() and an exception occurred during write: " + e.getMessage();
       if (address.equals("00:00:00:00:00:00")) 
         msg = msg + ".\n\nUpdate your server address from 00:00:00:00:00:00 to the correct address on line 35 in the java code";
@@ -175,4 +198,3 @@ public class Bluetooth extends Activity {
     }
   }
 }
-
