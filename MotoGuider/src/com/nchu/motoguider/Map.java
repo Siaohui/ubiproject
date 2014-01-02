@@ -42,7 +42,7 @@ public class Map extends ListActivity
 		Log.d("Map","自Geocoder取得目的地經/緯度 = "+dest_lat+"/"+dest_lng);
 		
 		LatLng dest = new LatLng(dest_lat,dest_lng);
-		LatLng origin = new LatLng(24.1236371,120.6750405);//getOriginGPS();
+		LatLng origin = getOriginGPS(); //new LatLng(24.1236371,120.6750405);//getOriginGPS();
 		// origin目前寫死為中興大學,因測試中無法取得自己的GPS
 		super.onCreate(savedInstanceState);
 		   
