@@ -3,6 +3,7 @@ package com.nchu.motoguider;
 import com.google.android.gms.maps.model.LatLng;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
@@ -11,6 +12,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 
 public class InfoService extends Service implements LocationListener
 {
@@ -34,6 +36,13 @@ public class InfoService extends Service implements LocationListener
 	{
 		Log.d("InfoService","啟動 InfoService");		
 		getJSONfromMap(intent);
+		
+		Intent intentToMap = new Intent("InfoService");
+		Bundle bundle = new Bundle();
+		bundle.putDouble("str", 3.0);
+		intentToMap.putExtras(bundle);
+		sendBroadcast(intentToMap);
+		
 		UpdateLocation();
 	}
 	
@@ -61,7 +70,7 @@ public class InfoService extends Service implements LocationListener
 				if(numOfNowInstruction >= numOfInstruction)
 				{
 					Log.d("InfoService", "導航結束");
-					//關掉service?
+					// bluetooth.send(); // 抵達終點的信號
 				}
 				else
 				{
@@ -196,4 +205,6 @@ public class InfoService extends Service implements LocationListener
 			 turnResult=14;
 		 return turnResult; 
 	}
+	
+	
 }

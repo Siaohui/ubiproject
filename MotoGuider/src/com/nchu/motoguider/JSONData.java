@@ -53,7 +53,7 @@ public class JSONData implements Serializable
 			  	    	 
 			  	    	 start_location_lat = (((JSONObject)((JSONObject)jSteps.get(k)).get("start_location"))).get("lat").toString() ;
 			  	    	 start_location_lng =(((JSONObject)((JSONObject)jSteps.get(k)).get("start_location"))).get("lng").toString() ;
-			  	    	 startPoint[k] = new LatLng(Double.valueOf(end_location_lat), Double.valueOf(end_location_lng));
+			  	    	 startPoint[k] = new LatLng(Double.valueOf(start_location_lat), Double.valueOf(start_location_lng));
 			  	    	 
 			  	    	 html_instructions = ((((JSONObject)jSteps.get(k)).getString("html_instructions")).toString());
 			  	    	 htmlInstruction[k] = html_instructions.replaceAll("\\<.*?>","");
@@ -85,7 +85,7 @@ public class JSONData implements Serializable
 	
 	/* parse html's instruction direction*/
 	
-	public int getTurn(String s)
+	public static int getTurn(String s)
 	 {
 		 int turnResult = -1;
 		 

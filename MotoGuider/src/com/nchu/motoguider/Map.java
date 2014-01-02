@@ -4,8 +4,7 @@ import java.io.IOException;
 
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
+import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -13,44 +12,81 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.os.AsyncTask;
 import android.app.ListActivity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.*;
 import com.google.android.gms.maps.model.LatLng;
 
-public class Map extends ListActivity 
+public class Map extends ListActivity
 {
-	String[] values;
-	ListView showInstructionView;
+	
+	ArrayList<HashMap<String,String>> list = new ArrayList<HashMap<String,String>>();
+	private SimpleAdapter adapter;
+	
 	TextView showText;
 	String[] instruction;
+	LatLng statrtPoint[];
+	LatLng endPoint[];
+	MyBroadcastReceiver receiver;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) 
 	{
-		double dest_lat = 0;
-		double dest_lng = 0;		   
 		
-		Intent getIntent = this.getIntent();
-		Bundle bundle = getIntent.getExtras();		
-		dest_lat = bundle.getDouble("lat");
-		dest_lng = bundle.getDouble("lng");
+		double dest_lat = 24.136781; //台中火車站經緯度
+		double dest_lng = 120.685008;		   
+		
+		//Intent getIntent = this.getIntent();
+		//Bundle bundle = getIntent.getExtras();		
+		//dest_lat = bundle.getDouble("lat");
+		//dest_lng = bundle.getDouble("lng");
 		Log.d("Map","自Geocoder取得目的地經/緯度 = "+dest_lat+"/"+dest_lng);
 		
 		LatLng dest = new LatLng(dest_lat,dest_lng);
-		LatLng origin = getOriginGPS(); //new LatLng(24.1236371,120.6750405);//getOriginGPS();
+		LatLng origin = getOriginGPS();//new LatLng(24.1236371,120.6750405);//getOriginGPS();
 		// origin目前寫死為中興大學,因測試中無法取得自己的GPS
 		super.onCreate(savedInstanceState);
 		   
 		String url = getDirectionsUrl(origin, dest);
 		DownloadTask downloadTask = new DownloadTask();
 		downloadTask.execute(url);
+		
+		/* 註冊廣播 */
+		IntentFilter filter = new IntentFilter("InfoService");
+		receiver = new MyBroadcastReceiver();
+		registerReceiver(receiver, filter);
 
 	 }
+	
+	@Override
+	protected void onDestroy()
+	{
+		unregisterReceiver(receiver);
+		super.onDestroy();
+	}
+	
+	/**/
+	private class MyBroadcastReceiver extends BroadcastReceiver
+	{
+		@Override
+		public void onReceive(Context context, Intent intent) 
+		{
+			int str;
+			Bundle bundle = intent.getExtras();
+			Log.d("Map","Recieve Brocast from InfoService"+bundle.getDouble("str"));
+			adapter.notifyDataSetChanged();
+		}
+	}
+	/**/
 		 
 	 public LatLng getOriginGPS()
 	 {
@@ -169,7 +205,8 @@ public class Map extends ListActivity
 	
 	  // Executes in UI thread, after the execution of
 	  // doInBackground()
-	  @Override
+	  
+		 @Override
 	  protected void onPostExecute(String result)
 	  {
 		  super.onPostExecute(result);
@@ -205,14 +242,47 @@ public class Map extends ListActivity
 		  @Override
 		  protected void onPostExecute(JSONData result)
 		  {
-			  values = result.getAllRoadInstruction();
+			  instruction = result.getAllRoadInstruction();
+			  statrtPoint = result.getAllRoadStartPoint();
+			  endPoint = result.getAllRoadEndPoint();
+			  
+			  //把資料加入ArrayList中
+			  
+			  for(int i=0; i<instruction.length; i++)
+			  {
+				  HashMap<String,String> item = new HashMap<String,String>();
+				  item.put( "Instruction", instruction[i]+"方向:"+JSONData.getTurn(instruction[i]));
+				  item.put( "startLatLng"," 起點經緯度：" + statrtPoint[i].latitude + "/" + statrtPoint[i].longitude );
+				  item.put( "endLatLng", "終點經緯度："+ endPoint[i].latitude + "/" + endPoint[i].longitude);
+				  item.put( "nowLatLng", "目前經緯度: unKnown");
+				  item.put( "nowSpeed", "目前速度: unKnown");
+				  item.put( "nowDistance", "目前剩餘距離: unKnown");
+				  item.put( "remainTime", "目前剩餘時間: unKnown");
+				  list.add(item);
+			  }
+			  
+			  //新增SimpleAdapter
+			  adapter =new SimpleAdapter( 
+			  Map.this, 
+			  list,
+			  R.layout.mylistview1, 
+			  new String[] { "Instruction","startLatLng","endLatLng","nowLatLng","nowSpeed","nowDistance","remainTime" },
+			  new int[] { R.id.textView1, R.id.textView2, R.id.textView3, R.id.textView4, R.id.textView5, R.id.textView6, R.id.textView7 } );
+			  
+			  setListAdapter(adapter);
+			  
+			  //
+			  
+			  /*
 			  setListAdapter
 			  ( 
 		                new ArrayAdapter<String>(
 		                        Map.this, 
 		                        android.R.layout.simple_list_item_1, 
-		                        values)
+		                        instruction)
 		      );
+		      */
+			  
 			  Intent intent = new Intent(Map.this, InfoService.class);
 			  Bundle bundle = new Bundle();
 			  bundle.putSerializable("allData",result);
