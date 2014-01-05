@@ -1,18 +1,16 @@
 package com.nchu.motoguider;
 
-import com.google.android.gms.maps.model.LatLng;
-
 import android.app.Service;
-import android.content.BroadcastReceiver;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
 public class InfoService extends Service implements LocationListener
 {
@@ -20,9 +18,16 @@ public class InfoService extends Service implements LocationListener
 	private LocationListener locationListener;
 	JSONData jsonData = null;
 	
-	LatLng startPoint[], endPoint[];
-	String htmlInstruction[];
+	double startPointLat[], startPointLng[];
+	double endPointLat[], endPointLng[];
 	
+	String htmlInstruction[];
+
+	Intent intentToMap = new Intent("InfoService");
+	Bundle bundle = new Bundle();
+	
+	String bestProvider;
+	static BTS mbts;
 	double lastLat = 0.0, lastLon = 0.0;
 	
 	@Override
@@ -37,22 +42,26 @@ public class InfoService extends Service implements LocationListener
 		Log.d("InfoService","啟動 InfoService");		
 		getJSONfromMap(intent);
 		
-		Intent intentToMap = new Intent("InfoService");
-		Bundle bundle = new Bundle();
-		bundle.putDouble("str", 3.0);
-		intentToMap.putExtras(bundle);
-		sendBroadcast(intentToMap);
-		
+		//bundle.putDouble("str", 3.0);
+		//intentToMap.putExtras(bundle);
+		//sendBroadcast(intentToMap);
 		UpdateLocation();
+		Log.d("InfoService","完成定位:"+lastLat+"/"+lastLon);	
 	}
 	
 	/* 從Map取得JSON Data */
 	public void getJSONfromMap(Intent intent)
 	{
-		jsonData = (JSONData) intent.getSerializableExtra("allData");
-		startPoint = jsonData.getAllRoadStartPoint();
-		endPoint = jsonData.getAllRoadEndPoint();
+		bundle = intent.getExtras();
+		jsonData = (JSONData) bundle.getSerializable("allData");
+		startPointLat = jsonData.getAllRoadStartPointLat();
+		startPointLng = jsonData.getAllRoadStartPointLng();
+		endPointLat = jsonData.getAllRoadEndPointLat();
+		endPointLng = jsonData.getAllRoadEndPointLng();
 		htmlInstruction = jsonData.getAllRoadInstruction();
+		// get bluetooth
+		//mbts = (BTS)bundle.getSerializable("bts");
+		//mbts.BTSend(1, 2);
 	}
 	
 	/* 啟動Location listener */
@@ -60,7 +69,10 @@ public class InfoService extends Service implements LocationListener
 	{
 		
 		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE); 
-		locationListener = new LocationListener()
+		Criteria criteria = new Criteria();
+	    bestProvider = locationManager.getBestProvider(criteria, false);
+		
+	    locationListener = new LocationListener()
 		{
 			int numOfInstruction = htmlInstruction.length; // 導航路段總數
 			int numOfNowInstruction = 0; // 使用者從第一個html_instruction開始
@@ -77,28 +89,43 @@ public class InfoService extends Service implements LocationListener
 					double remainTime = -1.0;
 					double distance = -1;
 					float speed = newLocation.getSpeed();
-					Double nowLon = newLocation.getLongitude();
+					Double nowLng = newLocation.getLongitude();
 					Double nowLat = newLocation.getLatitude();
-					Log.d("InfoService", "使用者目前經/緯度 = " + nowLon + ", /" + nowLat);
+					Log.d("InfoService", "使用者目前經/緯度 = " + nowLng + ", /" + nowLat);
+
 					
 					// 求目前位置與目前路段終點的距離
 					distance = 
 							getDistance
 							(
-									nowLat,nowLon,
-									endPoint[numOfNowInstruction].latitude,
-									endPoint[numOfNowInstruction].longitude
+									nowLat,nowLng,
+									endPointLat[numOfNowInstruction],
+									endPointLng[numOfNowInstruction]
 							);
-					// 求目前位置到目前路段終點的剩餘時間										
+					// 求目前位置到目前路段終點的剩餘時間
+					
 					remainTime = distance/speed;
 					Log.d("InfoService","距離下個路口: "+distance+" 時間: "+remainTime);
 					
-					if(remainTime<=12 & remainTime >= 0)
+					// 通知Map改變ListView, 送出所需更動的資料
+					
+					bundle.putDouble("nowLng", nowLng);
+					bundle.putDouble("nowLat", nowLat);
+					bundle.putDouble("nowSpeed", speed);
+					bundle.putDouble("nowDistance", distance);
+					bundle.putDouble("nowRemainTime", remainTime);
+					bundle.putInt("nowIndex", numOfNowInstruction);
+					
+					intentToMap.putExtras(bundle);
+					sendBroadcast(intentToMap);
+					Log.d("InfoService", "InfoService 已送出現在經緯度");
+					
+					if(remainTime <= 12 & remainTime >= 0)
 					{
-						/* ex:
-						* bluetooth.sendTime(remainTIme);
-						* bluetooth.sendDirection(getTurn(htmlInstruction[numOfNowInstruction]));
-						* */
+						// ex:
+						// bluetooth.sendTime(remainTIme);
+						// bluetooth.sendDirection(getTurn(htmlInstruction[numOfNowInstruction]));
+						
 					}
 					// else do nothing
 					if(remainTime == 0)
@@ -133,19 +160,19 @@ public class InfoService extends Service implements LocationListener
 			// TODO Auto-generated method stub
 		} 
 	};
-	locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,5000 , 0, locationListener);
+	locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000 , 0, locationListener);
 	}
 	
 	@Override
 	public void onLocationChanged(Location location)
 	{
 		//float speed = location.getSpeed();
-		/*
-		Double longitude = location.getLongitude();
-		Double latitude = location.getLatitude();
-		Log.i("Location=", "X=" + longitude.intValue() + ", Y=" + latitude.intValue());
-		*/
+		location = locationManager.getLastKnownLocation(bestProvider);
 		
+		Double latitude = location.getLatitude();
+		Double longitude = location.getLongitude();
+		
+		Log.i("Location=", "X=" + longitude.intValue() + ", Y=" + latitude.intValue());
 	}
 	@Override
 	public void onProviderDisabled(String provider)

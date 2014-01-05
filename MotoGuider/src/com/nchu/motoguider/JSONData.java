@@ -8,80 +8,65 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 
 public class JSONData implements Serializable
 {
 
 	private static final long serialVersionUID = 1L;
-	transient LatLng startPoint[];
-	transient LatLng endPoint[];
+	double startPointLat[];
+	double startPointLng[];
+	double endPointLat[];
+	double endPointLng[];
 	String htmlInstruction[];
 	
-	transient JSONArray jRoutes = null;
-	transient JSONArray jLegs = null;
-	transient JSONArray jSteps = null;
+    int[] testValue={1,2,3,4};
     
-    String end_location_lat, end_location_lng ;
-    String start_location_lat, start_location_lng;
-    String html_instructions = "";
-    
-	public JSONData(JSONObject jObject)
+	public JSONData(double startLat[], double[] startLng, double[] endLat, double[] endLng, String[] html)
 	{
-	    try 
-	    {
-	    	jRoutes = jObject.getJSONArray("routes");
-	    	for(int i = 0; i<jRoutes.length(); i++)
-	    	{
-	    		jLegs = ( (JSONObject)jRoutes.get(i)).getJSONArray("legs");
-		  	    /** Traversing all legs */
-	
-		  	    for(int j=0;j<jLegs.length();j++)
-		  	    {
-		  	    	 jSteps = ( (JSONObject)jLegs.get(j)).getJSONArray("steps");
-		  	    	 int len = jSteps.length();
-	  	    		 startPoint = new LatLng[len];
-	  	    		 endPoint = new LatLng[len];
-	  	    		 htmlInstruction = new String[len];
-		  	    	/** Traversing all steps */
-	
-			  	     for(int k = 0; k < jSteps.length(); k++)
-			  	     {
-			  	    	 end_location_lat = (((JSONObject)((JSONObject)jSteps.get(k)).get("end_location"))).get("lat").toString() ;   	 
-			  	    	 end_location_lng = (((JSONObject)((JSONObject)jSteps.get(k)).get("end_location"))).get("lng").toString() ;
-			  	    	 endPoint[k] = new LatLng(Double.valueOf(end_location_lat), Double.valueOf(end_location_lng));
-			  	    	 
-			  	    	 start_location_lat = (((JSONObject)((JSONObject)jSteps.get(k)).get("start_location"))).get("lat").toString() ;
-			  	    	 start_location_lng =(((JSONObject)((JSONObject)jSteps.get(k)).get("start_location"))).get("lng").toString() ;
-			  	    	 startPoint[k] = new LatLng(Double.valueOf(start_location_lat), Double.valueOf(start_location_lng));
-			  	    	 
-			  	    	 html_instructions = ((((JSONObject)jSteps.get(k)).getString("html_instructions")).toString());
-			  	    	 htmlInstruction[k] = html_instructions.replaceAll("\\<.*?>","");
-			  	     }
-		  	    }
-	    	}
-	    } catch (JSONException e)
-	    { 
-	    	e.printStackTrace();
-	    }
-	    catch (Exception e){}
-   }
+		startPointLat = startLat;
+		startPointLng = startLng;
+		endPointLat = endLat;
+		endPointLng = endLng;
+		htmlInstruction = html;
+	}
 	
 	/* get JSON data */
 
-	public LatLng[] getAllRoadStartPoint()
+	public double[] getAllRoadStartPointLat()
 	{
-		return startPoint;
+		return startPointLat;
 	}
 	
-	public LatLng[] getAllRoadEndPoint()
+	public double[] getAllRoadStartPointLng()
 	{
-		return endPoint;
+		return startPointLng;
 	}
+	
+	public double[] getAllRoadEndPointLat()
+	{
+		   return endPointLat;
+	}
+	
+	public double[] getAllRoadEndPointLng()
+	{
+		   return endPointLng;
+	}
+	
 	public String[] getAllRoadInstruction()
 	{
 		return htmlInstruction;
 	}
+	
+	 public void setTestValue(int arg) 
+	 { 
+	 } 
+	 public int[] getTestValue()
+	 { 
+		 return testValue; 
+	 }
 	
 	/* parse html's instruction direction*/
 	
