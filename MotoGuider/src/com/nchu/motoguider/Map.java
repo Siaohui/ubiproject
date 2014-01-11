@@ -32,10 +32,12 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class Map extends ListActivity
 {
-	
+	LatLng dest;
 	ArrayList<HashMap<String,String>> list = new ArrayList<HashMap<String,String>>();
 	private SimpleAdapter adapter;
 	Handler handler;
+	
+	Intent intent;
 	
 	TextView showText;
 	String[] instruction;
@@ -51,6 +53,9 @@ public class Map extends ListActivity
 	double startPointLng[];
 	double endPointLat[];
 	double endPointLng[];
+	double distance[];
+	double infoNowDistance;
+	int infoNowIndex;
 	String htmlInstruction[];
 	String html_instructions;
 	
@@ -60,21 +65,25 @@ public class Map extends ListActivity
 	@Override
 	protected void onCreate(Bundle savedInstanceState) 
 	{
-		double dest_lat = 24.136781; //台中火車站經緯度
-		double dest_lng = 120.685008;		   
+		intent = new Intent(Map.this, InfoService.class);
+		// 終點:中興大學校門口  24.124195,120.675155
+		//南門路小7:24.122364,120.679621
+		double dest_lat = 24.122364; 
+		double dest_lng = 120.679621;
+		/* 終點:中興大學理學大樓旁
+		double dest_lat = 24.12116; 
+		double dest_lng = 120.677931;		  
+		*/ 
 		mbts = new BTS();
-		handler = new Handler()
-		{
-		};
+		handler = new Handler(){};
 		//Intent getIntent = this.getIntent();
 		//Bundle bundle = getIntent.getExtras();	
 		//dest_lat = bundle.getDouble("lat");
 		//dest_lng = bundle.getDouble("lng");
 		Log.d("Map","自Geocoder取得目的地經/緯度 = "+dest_lat+"/"+dest_lng);
 		
-		LatLng dest = new LatLng(dest_lat,dest_lng);
-		LatLng origin = new LatLng(24.1236371,120.6750405);//getOriginGPS();
-		// origin目前寫死為中興大學,因測試中無法取得自己的GPS
+		dest = new LatLng(dest_lat,dest_lng);
+		LatLng origin = getOriginGPS();
 		super.onCreate(savedInstanceState);
 		   
 		String url = getDirectionsUrl(origin, dest);
@@ -85,28 +94,11 @@ public class Map extends ListActivity
 		IntentFilter filter = new IntentFilter("InfoService");
 		receiver = new MyBroadcastReceiver();
 		registerReceiver(receiver, filter);
-		
 	 }
-	//
 	@Override
 	protected void onStart()
 	{
 		super.onStart();
-	    if(btAdapter==null) {
-	    	  Log.e("BTSError", "Bluetooth not support");
-	    	  finish();
-	      }else if (!btAdapter.isEnabled()) {
-	          Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-	          startActivityForResult(enableIntent, 1);
-	      }
-	      else Log.i("BTState","...Bluetooth ON...");
-	      
-	      if(mbts!=null){
-	    	  if(mbts.BTSConnect()=="Finish")
-	      		finish();
-	      }
-	      else Log.e("BTState","mbts is NULL");
-
 	}
 	
 	@Override
@@ -128,49 +120,62 @@ public class Map extends ListActivity
 		@Override
 		public void onReceive(Context context, Intent intent) 
 		{
-			double infoNowLat;
-			double infoNowLng;
-			double infoNowSpeed;
-			double infoNowDistance;
-			double infoNowRemainTime;
-			int infoNowIndex;
-			Bundle bundle = intent.getExtras();
-			
-			infoNowLat = bundle.getDouble("nowLat");
-			infoNowLng = bundle.getDouble("nowLng");
-			infoNowSpeed = bundle.getDouble("nowSpeed");
-			infoNowDistance = bundle.getDouble("nowDistance");
-			infoNowRemainTime = bundle.getDouble("nowRemainTime");
-			infoNowIndex = bundle.getInt("nowIndex");
-			
-			Log.d("Map", "收到InfoService送來現在的經緯度 :" + infoNowLat +"/"+ infoNowLng);
-			Log.d("Map", "收到現在速度:" + infoNowSpeed);
-			Log.d("Map", "收到現在與該路段終點剩餘距離: " + infoNowDistance);
-			Log.d("Map", "收到現在與該路段終點剩餘時間: " + infoNowRemainTime);
-			Log.d("Map", "Index: " +  infoNowIndex);
-			//((TextView)findViewById(R.id.textView4)).setText("HaHaHa");
-			//setListAdapter(adapter);
-			
-			HashMap<String,String> item = new HashMap<String,String>();
-			item.put( "Instruction", htmlInstruction[infoNowIndex]+"方向:"+JSONData.getTurn(htmlInstruction[infoNowIndex]));
-			item.put( "startLatLng"," 起點經緯度： " + startPoint[infoNowIndex].latitude + "/" + startPoint[infoNowIndex].longitude );
-		    item.put( "endLatLng", "終點經緯度： "+ endPoint[infoNowIndex].latitude + "/" + endPoint[infoNowIndex].longitude);
-			item.put( "nowLatLng", "目前經緯度: "+infoNowLat+"/"+infoNowLng);
-			item.put( "nowSpeed", "目前速度: "+infoNowSpeed);
-			item.put( "nowDistance", "目前剩餘距離: "+infoNowDistance);
-			item.put( "remainTime", "目前剩餘時間: "+infoNowRemainTime);
-			list.set(infoNowIndex, item);
-			adapter.notifyDataSetChanged();
+			if(infoNowDistance > distance[infoNowIndex]+10)
+			{
+				String url = getDirectionsUrl(getOriginGPS(), dest);
+				stopService(intent);
+				DownloadTask downloadTask = new DownloadTask();
+				downloadTask.execute(url);
+			}
+			else
+			{
+				double infoNowLat;
+				double infoNowLng;
+				double infoNowSpeed;
+				double infoNowRemainTime;
+				Bundle bundle = intent.getExtras();
+				
+				infoNowLat = bundle.getDouble("nowLat");
+				infoNowLng = bundle.getDouble("nowLng");
+				infoNowSpeed = bundle.getDouble("nowSpeed");
+				infoNowDistance = bundle.getDouble("nowDistance");
+				infoNowRemainTime = bundle.getDouble("nowRemainTime");
+				infoNowIndex = bundle.getInt("nowIndex");
+				
+				Log.d("Map", "收到InfoService送來現在的經緯度 :" + infoNowLat +"/"+ infoNowLng);
+				Log.d("Map", "收到現在速度:" + infoNowSpeed);
+				Log.d("Map", "收到現在與該路段終點剩餘距離: " + infoNowDistance);
+				Log.d("Map", "收到現在與該路段終點剩餘時間: " + infoNowRemainTime);
+				Log.d("Map", "Index: " +  infoNowIndex);
+				
+				HashMap<String,String> item = new HashMap<String,String>();
+				item.put( "Instruction", htmlInstruction[infoNowIndex]+"方向:"+JSONData.getTurn(htmlInstruction[infoNowIndex]));
+				item.put( "startLatLng"," 起點經緯度： " + startPoint[infoNowIndex].latitude + "/" + startPoint[infoNowIndex].longitude );
+			    item.put( "endLatLng", "終點經緯度： "+ endPoint[infoNowIndex].latitude + "/" + endPoint[infoNowIndex].longitude);
+				item.put( "nowLatLng", "目前經緯度: "+infoNowLat+"/"+infoNowLng);
+				item.put( "nowSpeed", "目前速度: "+infoNowSpeed);
+				item.put( "nowDistance", "目前剩餘距離: "+infoNowDistance);
+				item.put( "RoadDistance", "路段距離: "+distance[infoNowIndex]);
+				item.put( "remainTime", "目前剩餘時間: "+infoNowRemainTime);
+				list.set(infoNowIndex, item);
+				adapter.notifyDataSetChanged();
+			}
 		}
 	}
-	/**/
 		 
 	 public LatLng getOriginGPS()
 	 {
-		 LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-	     Criteria criteria = new Criteria();
-	     String bestProvider = locationManager.getBestProvider(criteria, false);
-	     Location location = locationManager.getLastKnownLocation(bestProvider);
+		 //initial
+		 LocationManager locationManager = null;
+	     Criteria criteria = null;
+	     String bestProvider = null;
+	     Location location = null;
+		 //
+		 locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+	     criteria = new Criteria();
+	     bestProvider = locationManager.getBestProvider(criteria, false);
+	     location = locationManager.getLastKnownLocation(bestProvider);
+	     
 	     Double lat = 0.0, lon= 0.0;
 	     try 
 	     {
@@ -186,7 +191,7 @@ public class Map extends ListActivity
 	     if(lat == 0 & lon == 0)
 	    	 Log.d("Map","目前無法使用GPS取得您的位置");
 	     else
-	    	 Log.d("Map","您目前位置的GPS經緯度 = " + lat + "/ lon = "+lon);
+	    	 Log.d("gps","您目前位置的GPS經緯度 = " + lat + "/ lon = "+lon);
 	     return new LatLng(lat,lon);
 	 }
 
@@ -203,7 +208,7 @@ public class Map extends ListActivity
 		 String sensor = "sensor=false";
 	
 		 // Building the parameters to the web service
-		 String parameters = str_origin + "&" + str_dest + "&" + sensor +"&avoid=highways";
+		 String parameters = str_origin + "&" + str_dest + "&" + sensor +"&mode=walking";
 	
 		 // Output format
 		 String output = "json";
@@ -333,6 +338,7 @@ public class Map extends ListActivity
 			  	    		 startPointLng = new double[len];
 			  	    		 endPointLat = new double[len];
 			  	    		 endPointLng = new double[len];
+			  	    		 distance = new double[len];
 			  	    		 htmlInstruction = new String[len];
 				  	    	
 			  	    		 /** Traversing all steps */
@@ -345,9 +351,11 @@ public class Map extends ListActivity
 					  	    	 startPointLat[k] = Double.parseDouble((((JSONObject)((JSONObject)jSteps.get(k)).get("start_location"))).get("lat").toString()) ;
 					  	    	 startPointLng[k] = Double.parseDouble((((JSONObject)((JSONObject)jSteps.get(k)).get("start_location"))).get("lng").toString()) ;
 					  	    	 
+					  	    	 distance[k] = Double.parseDouble((((JSONObject)((JSONObject)jSteps.get(k)).get("distance"))).get("value").toString()) ;
+					  	    	 
 					  	    	 html_instructions = ((((JSONObject)jSteps.get(k)).getString("html_instructions")).toString());
 					  	    	 htmlInstruction[k] = html_instructions.replaceAll("\\<.*?>","");
-					  	    	
+					  	    	 
 					  	    	 startPoint[k] = new LatLng(startPointLat[k], startPointLng[k]);
 								 endPoint[k] = new LatLng(endPointLat[k], endPointLng[k]);
 					  	     }
@@ -363,56 +371,36 @@ public class Map extends ListActivity
 			  JSONData allData = new JSONData(startPointLat,startPointLng,endPointLat,endPointLng,htmlInstruction);
 			  			  
 			  //把資料加入ArrayList中
-			  
-			  
-			  HashMap<String,String> item = new HashMap<String,String>();
-			  item.put( "Instruction", "unKnown");
-			  item.put( "startLatLng"," 起點經緯度： unKnown");
-			  item.put( "endLatLng", "終點經緯度： unKnown");
-			  item.put( "nowLatLng", "目前經緯度: unKnown");
-			  item.put( "nowSpeed", "目前速度: unKnown");
-			  item.put( "nowDistance", "目前剩餘距離: unKnown");
-			  item.put( "remainTime", "目前剩餘時間: unKnown");
-				  
-			  list.add(item);
-			  
-			  
+			  list.clear();
+			  if(htmlInstruction.length!=0)
+			  {
+				  for(int index=0; index<htmlInstruction.length; index++)
+				  {
+					    HashMap<String,String> item = new HashMap<String,String>();
+					    Log.d("Map",htmlInstruction[index]);
+					    item.put( "Instruction", htmlInstruction[index]+"方向:"+JSONData.getTurn(htmlInstruction[index]));
+						item.put( "startLatLng"," 起點經緯度： " + startPoint[index].latitude + "/" + startPoint[index].longitude );
+					    item.put( "endLatLng", "終點經緯度： "+ endPoint[index].latitude + "/" + endPoint[index].longitude);
+						item.put( "nowLatLng", "目前經緯度: unknown");
+						item.put( "nowSpeed", "目前速度: unknown");
+						item.put( "nowDistance", "目前剩餘距離: unknown");
+						item.put( "RoadDistance", "路段距離: unknown");
+						item.put( "remainTime", "目前剩餘時間: unknown");
+						list.add(item);
+				  }
+			  }
 			  //新增SimpleAdapter
 			  adapter =new SimpleAdapter( 
 			  Map.this, 
 			  list,
 			  R.layout.mylistview1, 
-			  new String[] { "Instruction","startLatLng","endLatLng","nowLatLng","nowSpeed","nowDistance","remainTime" },
-			  new int[] { R.id.textView1, R.id.textView2, R.id.textView3, R.id.textView4, R.id.textView5, R.id.textView6, R.id.textView7 } );
+			  new String[] { "Instruction","startLatLng","endLatLng","nowLatLng","nowSpeed","nowDistance", "RoadDistance","remainTime" },
+			  new int[] { R.id.textView1, R.id.textView2, R.id.textView3, R.id.textView4, R.id.textView5, R.id.textView6, R.id.textView7, R.id.textView8 } );
 			  
 			  setListAdapter(adapter);
-			  //
 			  
-			  /*
-			  setListAdapter
-			  ( 
-		                new ArrayAdapter<String>(
-		                        Map.this, 
-		                        android.R.layout.simple_list_item_1, 
-		                        instruction)
-		      );
-		      */
-			  
-			  //Log.d("InfoService", "endpoint0 = " + endPoint[0].latitude +"/"+ endPoint[0].longitude);
-			  /*
-			  if(endPoint.length > 0)
-			  {
-			    Log.d("InfoService", "endpoint0 = " + endPoint[0].latitude +"/"+ endPoint[0].longitude);
-			  }
-			  else
-			  {
-				  Log.d("InfoService","UCCU it's null");
-			  }*/
-			  
-			  Intent intent = new Intent(Map.this, InfoService.class);
 			  Bundle bundle = new Bundle();
 			  bundle.putSerializable("allData",allData);
-			  // bundle.putSerializable("bts", mbts);
 			  intent.putExtras(bundle);
 			  startService(intent);
 		  }

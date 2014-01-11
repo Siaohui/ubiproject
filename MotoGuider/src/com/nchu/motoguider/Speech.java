@@ -133,7 +133,6 @@ public class Speech extends Activity
 		{
 			super.onPreExecute();
 		}
-
 	}
 	// ¤U¸üJSON¸ê®Æ
 	public String getData(String dest)

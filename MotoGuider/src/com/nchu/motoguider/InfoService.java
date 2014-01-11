@@ -27,7 +27,10 @@ public class InfoService extends Service implements LocationListener
 	Bundle bundle = new Bundle();
 	
 	String bestProvider;
+	
 	static BTS mbts;
+	private BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+	
 	double lastLat = 0.0, lastLon = 0.0;
 	
 	@Override
@@ -39,14 +42,35 @@ public class InfoService extends Service implements LocationListener
 	@Override
 	public void onStart(Intent intent,int startId)
 	{
+		mbts = new BTS();
+		//mbts.BTSend(0,1);
+		//mbts.BTSend(Time, Direction)
 		Log.d("InfoService","啟動 InfoService");		
 		getJSONfromMap(intent);
-		
+		//
+	      if(btAdapter==null) 
+	      {
+	    	  Log.e("BTSError", "Bluetooth not support");
+	      }else if (!btAdapter.isEnabled()) 
+	      {
+	          Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+	      }
+	      else Log.i("BTState","...Bluetooth ON...");
+	      
+	      if(mbts!=null)
+	      {
+	    	  if(mbts.BTSConnect()=="Finish")
+	      		;
+	      }
+	      else Log.e("BTState","mbts is NULL");
+		//
 		//bundle.putDouble("str", 3.0);
 		//intentToMap.putExtras(bundle);
 		//sendBroadcast(intentToMap);
 		UpdateLocation();
-		Log.d("InfoService","完成定位:"+lastLat+"/"+lastLon);	
+		Log.d("InfoService","完成定位:"+lastLat+"/"+lastLon);
+		mbts.BTSend(0,1);
+
 	}
 	
 	/* 從Map取得JSON Data */
@@ -60,29 +84,26 @@ public class InfoService extends Service implements LocationListener
 		endPointLng = jsonData.getAllRoadEndPointLng();
 		htmlInstruction = jsonData.getAllRoadInstruction();
 		// get bluetooth
-		//mbts = (BTS)bundle.getSerializable("bts");
-		//mbts.BTSend(1, 2);
 	}
 	
 	/* 啟動Location listener */
 	public void UpdateLocation()
 	{
-		
 		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE); 
 		Criteria criteria = new Criteria();
 	    bestProvider = locationManager.getBestProvider(criteria, false);
 		
 	    locationListener = new LocationListener()
 		{
+	    	boolean haveChanged = false;
 			int numOfInstruction = htmlInstruction.length; // 導航路段總數
 			int numOfNowInstruction = 0; // 使用者從第一個html_instruction開始
-			
 			public void onLocationChanged(Location newLocation)
 			{
-				if(numOfNowInstruction >= numOfInstruction)
+				if(numOfNowInstruction > numOfInstruction)
 				{
 					Log.d("InfoService", "導航結束");
-					// bluetooth.send(); // 抵達終點的信號
+					mbts.BTSend(0, 0);
 				}
 				else
 				{
@@ -93,7 +114,6 @@ public class InfoService extends Service implements LocationListener
 					Double nowLat = newLocation.getLatitude();
 					Log.d("InfoService", "使用者目前經/緯度 = " + nowLng + ", /" + nowLat);
 
-					
 					// 求目前位置與目前路段終點的距離
 					distance = 
 							getDistance
@@ -115,22 +135,27 @@ public class InfoService extends Service implements LocationListener
 					bundle.putDouble("nowDistance", distance);
 					bundle.putDouble("nowRemainTime", remainTime);
 					bundle.putInt("nowIndex", numOfNowInstruction);
-					
 					intentToMap.putExtras(bundle);
 					sendBroadcast(intentToMap);
 					Log.d("InfoService", "InfoService 已送出現在經緯度");
-					
-					if(remainTime <= 12 & remainTime >= 0)
+					if(distance > 24)
 					{
-						// ex:
-						// bluetooth.sendTime(remainTIme);
-						// bluetooth.sendDirection(getTurn(htmlInstruction[numOfNowInstruction]));
-						
+						mbts.BTSend(8, getTurn(htmlInstruction[numOfNowInstruction]));
 					}
-					// else do nothing
-					if(remainTime == 0)
+					if(distance < 24)
+					{
+						mbts.BTSend((int)(distance/4)-1, getTurn(htmlInstruction[numOfNowInstruction]));
+					}	
+					if(distance < 10)
 					{
 						numOfNowInstruction++;
+						
+						if(numOfNowInstruction>numOfInstruction)
+						{
+							Log.d("InfoService", "導航結束");
+							mbts.BTSend(0, 0);
+							numOfNowInstruction--;
+						}
 					}
 				}
 			}

@@ -3,7 +3,6 @@ package com.nchu.motoguider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
@@ -137,12 +136,16 @@ public class BTS
 			BTSConnect();
 		}
 		String WriteStr="";
-		WriteStr+=String.valueOf((int)(Time/2));
 		WriteStr+=String.valueOf((char)(Direction+66));
+		WriteStr+=String.valueOf((int)(Time/2));
 		mConnectedThread.write(WriteStr);
 		Log.i("BTState","Send:"+WriteStr);
+		
 		return "null";		
 	}
+	
+	
+	
 	private BluetoothSocket createBluetoothSocket(BluetoothDevice device) throws IOException 
 	{
 	      if(Build.VERSION.SDK_INT >= 10)
